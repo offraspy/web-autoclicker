@@ -3,208 +3,552 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Karambit Clicker</title>
+    <title>Karambit Spin Clicker</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Audiowide&display=swap');
+
+        :root {
+            --bg-color: #0b0114;
+            --main-font: 'Audiowide', cursive;
+            --ui-purple: #1e053a;
+            --ui-purple-lighter: #2d0758;
+            --accent-pink: #d011f0;
+            --accent-cyan: #0ff;
+            --glow-cyan: 0 0 10px rgba(0, 255, 255, 0.7);
+            --glow-pink: 0 0 10px rgba(208, 17, 240, 0.7);
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #121214;
-            color: #ffffff;
             margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            /* Galactic background using radial gradients for a space feel */
+            background-image: 
+                radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 10px),
+                radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 5px),
+                radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 10px);
+            background-size: 550px 550px, 350px 350px, 250px 250px;
+            background-position: 0 0, 40px 60px, 130px 270px;
+            color: #fff;
+            font-family: var(--main-font);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            text-shadow: var(--glow-cyan);
+        }
+
+        /* Overlaying purple galaxy effect */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, transparent, rgba(30, 5, 58, 0.5) 70%, #000 100%);
+            z-index: -1;
+        }
+
+        #game-layout {
+            display: grid;
+            grid-template-columns: 3fr 1.2fr;
+            grid-template-areas: "main sidebar";
+            width: 100vw;
+            height: 100vh;
+            max-width: 1920px;
+            max-height: 1080px;
+            box-sizing: border-box;
             padding: 20px;
+        }
+
+        /* --- MAIN AREA (KARAMBIT & SCORES) --- */
+        #main-area {
+            grid-area: main;
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: space-around;
+            position: relative;
         }
-        .game-container {
-            background: #1a1a1e;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
-            max-width: 400px;
-            width: 100%;
+
+        #game-title {
+            font-size: 3rem;
+            color: var(--accent-cyan);
+            margin: 0;
         }
-        .stats {
-            font-size: 24px;
-            margin-bottom: 10px;
-            font-weight: bold;
-            color: #00ffcc;
-        }
-        .rate {
-            font-size: 14px;
-            color: #a0a0a5;
-            margin-bottom: 30px;
-        }
-        /* Clickable Area for the Knife */
-        .click-zone {
-            width: 200px;
-            height: 200px;
-            margin: 0 auto 30px auto;
+
+        /* Spinning Karambit Container */
+        #spin-area {
             position: relative;
             cursor: pointer;
+            width: 50vh;
+            height: 50vh;
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
         }
-        /* CSS Karambit Drawing */
-        .karambit {
-            width: 140px;
-            height: 140px;
-            position: relative;
-            transition: transform 0.1s ease;
-            transform-origin: 105px 35px; /* Pivot around the finger ring */
-        }
-        /* Curved Blade */
-        .blade {
-            position: absolute;
-            top: 20px;
-            left: 10px;
-            width: 80px;
-            height: 80px;
-            border: 12px solid #e0e0e0;
-            border-radius: 50%;
-            border-right-color: transparent;
-            border-bottom-color: transparent;
-            transform: rotate(-35deg);
-        }
-        .blade::after {
+
+        /* target circle overlay */
+        #spin-area::after {
             content: '';
             position: absolute;
-            top: -6px;
-            left: 6px;
-            width: 0;
-            height: 0;
-            border-left: 10px solid transparent;
-            border-right: 15px solid #e0e0e0;
-            border-bottom: 25px solid transparent;
-            transform: rotate(-45deg);
-        }
-        /* Handle */
-        .handle {
-            position: absolute;
-            top: 30px;
-            left: 65px;
-            width: 45px;
-            height: 22px;
-            background-color: #2a2a2e;
-            border-radius: 5px;
-            transform: rotate(25deg);
-            border: 2px solid #3a3a3e;
-        }
-        /* Safety Ring */
-        .ring {
-            position: absolute;
-            top: 20px;
-            left: 95px;
-            width: 24px;
-            height: 24px;
-            border: 6px solid #2a2a2e;
+            width: 80%; height: 80%;
+            border: 2px solid rgba(0, 255, 255, 0.3);
             border-radius: 50%;
+            pointer-events: none;
         }
-        /* Shop Styles */
-        .shop-box {
-            border-top: 1px solid #2a2a2e;
-            padding-top: 20px;
-            margin-top: 20px;
+
+        /* The Karambit itself (CSS drawing) */
+        #karambit {
+            width: 60%;
+            height: 60%;
+            position: relative;
+            transform-origin: center;
+            /* Pivot point is the finger ring, not geometric center */
+            transform-origin: 75% 25%;
+            transition: transform 0.1s linear;
         }
-        .upgrade-btn {
-            background-color: #00ffcc;
-            color: #121214;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 6px;
+
+        /* CSS Karambit Drawing */
+        .karambit { width: 140px; height: 140px; position: relative; transform-origin: 105px 35px; }
+        .blade { position: absolute; top: 20px; left: 10px; width: 80px; height: 80px; border: 12px solid var(--accent-cyan); border-radius: 50%; border-right-color: transparent; border-bottom-color: transparent; transform: rotate(-35deg); }
+        .blade::after { content: ''; position: absolute; top: -6px; left: 6px; width: 0; height: 0; border-left: 10px solid transparent; border-right: 15px solid var(--accent-cyan); border-bottom: 25px solid transparent; transform: rotate(-45deg); }
+        .handle { position: absolute; top: 30px; left: 65px; width: 45px; height: 22px; background-color: var(--ui-purple); border-radius: 5px; transform: rotate(25deg); border: 2px solid #3a3a3e; }
+        .ring { position: absolute; top: 20px; left: 95px; width: 24px; height: 24px; border: 6px solid var(--ui-purple); border-radius: 50%; }
+
+        /* Score Display (Spins: 1,234,567) */
+        #spin-score {
+            font-size: 5rem;
+            color: #fff;
+            text-shadow: var(--glow-cyan), var(--glow-pink);
+            margin-top: 10px;
+        }
+
+        /* Dynamic Click Value Markers (the +1234 on click) */
+        .click-value {
+            position: absolute;
+            font-size: 1.5rem;
+            color: var(--accent-cyan);
+            pointer-events: none;
+            opacity: 1;
+            animation: float-up 1s ease-out forwards;
+        }
+
+        @keyframes float-up {
+            to {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+        }
+
+        #click-prompt {
+            position: absolute;
+            bottom: 20px;
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* --- SIDEBAR AREA (UPGRADES & STATS) --- */
+        #sidebar-area {
+            grid-area: sidebar;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 10px;
+        }
+
+        .panel {
+            background-color: var(--ui-purple);
+            border: 2px solid var(--ui-purple-lighter);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .panel-title {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background-color: var(--bg-color);
+            padding: 0 10px;
+            font-size: 1.5rem;
+            color: var(--accent-cyan);
+        }
+
+        /* --- UPGRADES PANEL --- */
+        #upgrades-list {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .upgrade-item {
+            display: grid;
+            grid-template-columns: 60px 1fr auto;
+            align-items: center;
+            background-color: var(--ui-purple-lighter);
+            border: 1px solid var(--ui-purple);
+            border-radius: 8px;
+            padding: 10px;
             cursor: pointer;
-            width: 100%;
-            transition: background 0.2s;
+            transition: background 0.2s, border-color 0.2s;
         }
-        .upgrade-btn:disabled {
-            background-color: #3a3a3e;
-            color: #7a7a7e;
+
+        .upgrade-item:hover {
+            border-color: var(--accent-cyan);
+        }
+
+        .upgrade-item:active {
+            transform: translateY(1px);
+        }
+
+        .upgrade-item.disabled {
+            opacity: 0.5;
             cursor: not-allowed;
+            pointer-events: none;
         }
+
+        /* Placeholder images/icons from image */
+        .upgrade-icon {
+            width: 40px;
+            height: 40px;
+            background-color: #3a3a3e;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid transparent;
+        }
+
+        .upgrade-item:hover .upgrade-icon {
+            border-color: var(--accent-cyan);
+        }
+
+        .upgrade-name {
+            font-size: 1.2rem;
+            color: var(--accent-cyan);
+        }
+
+        .upgrade-desc {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .upgrade-cost {
+            font-size: 1rem;
+            color: var(--accent-pink);
+            grid-column: 2 / span 2;
+            text-align: right;
+            margin-top: 5px;
+        }
+
+        /* Highlighting the specific upgrade from image */
+        #autospinner-bot-upgrade {
+            border-color: var(--accent-pink);
+        }
+
+        /* --- STATS PANEL --- */
+        #stats-list {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .stat-item {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .stat-value {
+            color: #fff;
+        }
+
+        #autoclick-toggle {
+            font-size: 1.1rem;
+            margin-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        #toggle-status {
+            color: var(--accent-pink);
+            transition: color 0.2s;
+        }
+
+        #toggle-status.on {
+            color: var(--accent-cyan);
+        }
+
     </style>
 </head>
 <body>
 
-<div class="game-container">
-    <div class="stats">Clicks: <span id="score">0</span></div>
-    <div class="rate">Autoclickers: <span id="auto-count">0</span> (Adds <span id="cps-rate">0</span>/sec)</div>
-    
-    <div class="click-zone" id="knife-zone">
-        <div class="karambit" id="karambit-knife">
-            <div class="blade"></div>
-            <div class="handle"></div>
-            <div class="ring"></div>
-        </div>
+    <div id="game-layout">
+
+        <main id="main-area">
+            <h1 id="game-title">KARAMBIT SPIN CLICKER</h1>
+
+            <div id="spin-area">
+                <div id="karambit" class="karambit">
+                    <div class="blade"></div>
+                    <div class="handle"></div>
+                    <div class="ring"></div>
+                </div>
+            </div>
+
+            <div id="spin-score">1,234,567</div>
+
+            <div id="click-prompt">SPINS: [Count]</div>
+        </main>
+
+        <aside id="sidebar-area">
+            
+            <div id="upgrades-panel" class="panel">
+                <div class="panel-title">UPGRADES</div>
+                
+                <div id="upgrades-list">
+                    
+                    <div class="upgrade-item" id="whetstone-upgrade">
+                        <div class="upgrade-icon">W</div>
+                        <div>
+                            <div class="upgrade-name">Whetstone</div>
+                            <div class="upgrade-desc">(Increases spins per click)</div>
+                        </div>
+                        <div class="upgrade-cost">Cost: 150</div>
+                    </div>
+
+                    <div class="upgrade-item" id="balanced-upgrade">
+                        <div class="upgrade-icon">B</div>
+                        <div>
+                            <div class="upgrade-name">Balanced Blade</div>
+                            <div class="upgrade-desc">(Automatic base spin rate)</div>
+                        </div>
+                        <div class="upgrade-cost">Cost: 500</div>
+                    </div>
+
+                    <div class="upgrade-item" id="autospinner-bot-upgrade">
+                        <div class="upgrade-icon">A</div>
+                        <div>
+                            <div class="upgrade-name">Autospinner Bot</div>
+                            <div class="upgrade-desc">(Periodically clicks automatically)</div>
+                        </div>
+                        <div class="upgrade-cost">Cost: 2,500</div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="stats-panel" class="panel">
+                <div class="panel-title">STATS</div>
+                
+                <div id="stats-list">
+                    <div class="stat-item">Current RPM: <span class="stat-value" id="stat-rpm">0</span></div>
+                    <div class="stat-item">Click Power: <span class="stat-value" id="stat-clickpower">1</span></div>
+                    <div class="stat-item">Auto-Spins: <span class="stat-value" id="stat-autosps">0</span></div>
+                </div>
+
+                <div id="autoclick-toggle">
+                    [x] Autoclick <span id="toggle-status">OFF</span>
+                </div>
+            </div>
+        </aside>
+
     </div>
-    
-    <div class="shop-box">
-        <button class="upgrade-btn" id="buy-auto" disabled>Buy Autoclicker (Cost: 15)</button>
-    </div>
-</div>
 
-<script>
-    let score = 0;
-    let autoClickers = 0;
-    let autoClickerCost = 15;
-    let currentRotation = 0;
-    let rotationSpeed = 0;
+    <script>
+        // --- GAME STATE ---
+        let state = {
+            spins: 0,
+            rpm: 0,
+            clickPower: 1,
+            autoSpinsPerSecond: 0,
+            autoclickEnabled: false,
+            rotation: 0,
+            rotationVelocity: 0, // RPM -> Angular Velocity
+            lastManualClickTime: 0,
+            upgrades: {
+                whetstone: { count: 0, baseCost: 150, currentCost: 150, powerGain: 1 },
+                balanced: { count: 0, baseCost: 500, currentCost: 500, rpmGain: 5 },
+                autospinner: { count: 0, baseCost: 2500, currentCost: 2500, autoSpinsGain: 1 }
+            }
+        };
 
-    const scoreDisplay = document.getElementById('score');
-    const autoCountDisplay = document.getElementById('auto-count');
-    const cpsRateDisplay = document.getElementById('cps-rate');
-    const knife = document.getElementById('karambit-knife');
-    const knifeZone = document.getElementById('knife-zone');
-    const buyAutoButton = document.getElementById('buy-auto');
+        // --- UI ELEMENTS ---
+        const ui = {
+            score: document.getElementById('spin-score'),
+            karambit: document.getElementById('karambit'),
+            spinArea: document.getElementById('spin-area'),
+            
+            whetstone: document.getElementById('whetstone-upgrade'),
+            balanced: document.getElementById('balanced-upgrade'),
+            autospinner: document.getElementById('autospinner-bot-upgrade'),
 
-    // Update numbers on the screen and check button states
-    function updateDisplay() {
-        scoreDisplay.textContent = Math.floor(score);
-        autoCountDisplay.textContent = autoClickers;
-        cpsRateDisplay.textContent = autoClickers;
-        buyAutoButton.textContent = `Buy Autoclicker (Cost: ${autoClickerCost})`;
-        buyAutoButton.disabled = score < autoClickerCost;
-    }
+            statRpm: document.getElementById('stat-rpm'),
+            statClickPower: document.getElementById('stat-clickpower'),
+            statAutoSps: document.getElementById('stat-autosps'),
+            
+            toggle: document.getElementById('autoclick-toggle'),
+            toggleStatus: document.getElementById('toggle-status')
+        };
 
-    // Manual click action
-    knifeZone.addEventListener('click', () => {
-        score += 1;
-        rotationSpeed += 15; // Spin faster upon manual click
-        updateDisplay();
-    });
+        // --- UTILITIES ---
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
 
-    // Buy upgrade action
-    buyAutoButton.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevents triggering a manual click
-        if (score >= autoClickerCost) {
-            score -= autoClickerCost;
-            autoClickers += 1;
-            rotationSpeed += 25; // Boost spin speed when buying
-            autoClickerCost = Math.round(autoClickerCost * 1.15); // Increase cost
+        // --- CORE FUNCTIONS ---
+
+        // 1. Update all UI elements based on current state
+        function updateDisplay() {
+            ui.score.textContent = formatNumber(Math.floor(state.spins));
+            ui.statRpm.textContent = formatNumber(Math.floor(state.rpm));
+            ui.statClickPower.textContent = formatNumber(Math.floor(state.clickPower));
+            ui.statAutoSps.textContent = formatNumber(Math.floor(state.autoSpinsPerSecond));
+
+            // Upgrade Costs
+            ui.whetstone.querySelector('.upgrade-cost').textContent = `Cost: ${formatNumber(state.upgrades.whetstone.currentCost)}`;
+            ui.balanced.querySelector('.upgrade-cost').textContent = `Cost: ${formatNumber(state.upgrades.balanced.currentCost)}`;
+            ui.autospinner.querySelector('.upgrade-cost').textContent = `Cost: ${formatNumber(state.upgrades.autospinner.currentCost)}`;
+
+            // Upgrade Disabled State (can't afford)
+            [ui.whetstone, ui.balanced, ui.autospinner].forEach(el => {
+                const cost = parseInt(el.querySelector('.upgrade-cost').textContent.replace(/[^\d]/g, ''));
+                if (state.spins < cost) { el.classList.add('disabled'); } else { el.classList.remove('disabled'); }
+            });
+        }
+
+        // 2. Perform a Click Action
+        function performClick(event, fromAuto = false) {
+            if (!fromAuto) {
+                // Prevent normal clicking behavior on the upgrade items
+                if (event.target.closest('.upgrade-item') || event.target.closest('#stats-panel')) return;
+                state.lastManualClickTime = Date.now();
+            }
+
+            const gain = state.clickPower;
+            state.spins += gain;
+            
+            // Kinetic boost: Clicks boost RPM temporarily
+            state.rotationVelocity += gain * 0.1; // Adjust formula for spin logic
+
+            if (event && !fromAuto) {
+                spawnClickValue(event, gain);
+            }
+
             updateDisplay();
         }
-    });
 
-    // Game loop running 60 times per second
-    setInterval(() => {
-        // Add autoclicker progress
-        if (autoClickers > 0) {
-            score += autoClickers / 60;
-            rotationSpeed += autoClickers * 0.1; // Passive acceleration from autoclickers
-            updateDisplay();
+        // 3. Spawning floating click values (+1234)
+        function spawnClickValue(event, value) {
+            const clickX = event.clientX;
+            const clickY = event.clientY;
+
+            const floatingVal = document.createElement('div');
+            floatingVal.className = 'click-value';
+            floatingVal.textContent = `+${formatNumber(value)}`;
+            floatingVal.style.left = `${clickX}px`;
+            floatingVal.style.top = `${clickY}px`;
+
+            document.body.appendChild(floatingVal);
+
+            // Remove element after animation finishes
+            floatingVal.addEventListener('animationend', () => {
+                floatingVal.remove();
+            });
         }
 
-        // Apply rotation movement
-        currentRotation += rotationSpeed;
-        knife.style.transform = `rotate(${currentRotation}deg)`;
+        // 4. Upgrade Purchase Logic
+        function buyUpgrade(upgradeKey) {
+            const upgrade = state.upgrades[upgradeKey];
+            if (state.spins >= upgrade.currentCost) {
+                state.spins -= upgrade.currentCost;
+                upgrade.count++;
+                
+                // Apply benefits
+                if (upgradeKey === 'whetstone') state.clickPower += upgrade.powerGain;
+                if (upgradeKey === 'balanced') {
+                    // Passive RPM bonus
+                    state.autoSpinsPerSecond += upgrade.rpmGain / 60; // 60s in an hour? No, RPM is Spins per Minute. 
+                    state.autoSpinsPerSecond += 1; // Simplify
+                }
+                if (upgradeKey === 'autospinner') state.autoclickEnabled = true;
 
-        // Gradually slow down the spin due to friction
-        rotationSpeed *= 0.95;
-        if (rotationSpeed < 0.1) rotationSpeed = 0;
-    }, 1000 / 60);
-</script>
+                // Scale Cost (exponential)
+                upgrade.currentCost = Math.round(upgrade.baseCost * Math.pow(1.15, upgrade.count));
+                
+                updateDisplay();
+            }
+        }
+
+        // --- MAIN GAME LOOP (60 times per second) ---
+        function gameLoop() {
+            const now = Date.now();
+            const dt = 1 / 60; // Delta time (1/60th of a second)
+
+            // 1. Passive Spin Generation (Autoclickers & Passive RPM)
+            if (state.autoSpinsPerSecond > 0 || state.autoclickEnabled) {
+                let passiveGain = state.autoSpinsPerSecond * dt;
+                
+                // Autospinner simulates periodic clicks
+                if (state.autoclickEnabled) {
+                    const timeSinceLastManual = now - state.lastManualClickTime;
+                    // Simulate a click every ~250ms (4/sec)
+                    if (timeSinceLastManual > 250) {
+                        performClick(null, true);
+                    }
+                }
+                state.spins += passiveGain;
+            }
+
+            // 2. Physics / Rotation Update
+            // Velocity simulation (simplistic)
+            state.rotation += state.rotationVelocity;
+            ui.karambit.style.transform = `rotate(${state.rotation}deg)`;
+
+            // Friction (Gradually slow spin Velocity)
+            state.rotationVelocity *= 0.99; // Adjust number for speed decay
+            if (state.rotationVelocity < 0.1) state.rotationVelocity = 0;
+            
+            // Calculate RPM based on velocity
+            // velocity is deg/tick. 60 tick/sec * 60 sec/min = 3600 tick/min.
+            // 360 deg is 1 full rotation.
+            // (deg/tick * 3600 tick/min) / 360 deg/rotation = Rotations/min
+            state.rpm = state.rotationVelocity * (3600 / 360);
+
+            // 3. Display update
+            updateDisplay();
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- EVENT LISTENERS ---
+
+        // Main Clicking
+        ui.spinArea.addEventListener('click', performClick);
+
+        // Upgrades
+        ui.whetstone.addEventListener('click', () => buyUpgrade('whetstone'));
+        ui.balanced.addEventListener('click', () => buyUpgrade('balanced'));
+        ui.autospinner.addEventListener('click', () => buyUpgrade('autospinner'));
+
+        // Autoclick Toggle
+        ui.toggle.addEventListener('click', () => {
+            state.autoclickEnabled = !state.autoclickEnabled;
+            ui.toggleStatus.textContent = state.autoclickEnabled ? "ON" : "OFF";
+            ui.toggleStatus.classList.toggle('on', state.autoclickEnabled);
+        });
+
+        // --- START GAME ---
+        requestAnimationFrame(gameLoop);
+
+    </script>
 
 </body>
 </html>
