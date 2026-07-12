@@ -3,79 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Autoclicker Demonstration</title>
+    <title>Karambit Clicker</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            padding-top: 50px;
-            background-color: #f4f4f9;
+            background-color: #121214;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        .container {
-            background: white;
+        .game-container {
+            background: #1a1a1e;
             padding: 30px;
-            border-radius: 8px;
-            display: inline-block;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            max-width: 400px;
+            width: 100%;
         }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            margin: 10px;
+        .stats {
+            font-size: 24px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #00ffcc;
+        }
+        .rate {
+            font-size: 14px;
+            color: #a0a0a5;
+            margin-bottom: 30px;
+        }
+        /* Clickable Area for the Knife */
+        .click-zone {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 30px auto;
+            position: relative;
             cursor: pointer;
-            border: none;
-            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        #target { background-color: #3498db; color: white; }
-        #toggle { background-color: #2ecc71; color: white; }
-        #toggle.running { background-color: #e74c3c; }
-        .score { font-size: 24px; font-weight: bold; margin: 20px 0; }
+        /* CSS Karambit Drawing */
+        .karambit {
+            width: 140px;
+            height: 140px;
+            position: relative;
+            transition: transform 0.1s ease;
+            transform-origin: 105px 35px; /* Pivot around the finger ring */
+        }
+        /* Curved Blade */
+        .blade {
+            position: absolute;
+            top: 20px;
+            left: 10px;
+            width: 80px;
+            height: 80px;
+            border: 12px solid #e0e0e0;
+            border-radius: 50%;
+            border-right-color: transparent;
+            border-bottom-color: transparent;
+            transform: rotate(-35deg);
+        }
+        .blade::after {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 6px;
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 15px solid #e0e0e0;
+            border-bottom: 25px solid transparent;
+            transform: rotate(-45deg);
+        }
+        /* Handle */
+        .handle {
+            position: absolute;
+            top: 30px;
+            left: 65px;
+            width: 45px;
+            height: 22px;
+            background-color: #2a2a2e;
+            border-radius: 5px;
+            transform: rotate(25deg);
+            border: 2px solid #3a3a3e;
+        }
+        /* Safety Ring */
+        .ring {
+            position: absolute;
+            top: 20px;
+            left: 95px;
+            width: 24px;
+            height: 24px;
+            border: 6px solid #2a2a2e;
+            border-radius: 50%;
+        }
+        /* Shop Styles */
+        .shop-box {
+            border-top: 1px solid #2a2a2e;
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+        .upgrade-btn {
+            background-color: #00ffcc;
+            color: #121214;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        .upgrade-btn:disabled {
+            background-color: #3a3a3e;
+            color: #7a7a7e;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Web Autoclicker</h1>
-    <p>This application simulates rapid clicks on the target button.</p>
+<div class="game-container">
+    <div class="stats">Clicks: <span id="score">0</span></div>
+    <div class="rate">Autoclickers: <span id="auto-count">0</span> (Adds <span id="cps-rate">0</span>/sec)</div>
     
-    <div class="score">Clicks: <span id="clickCount">0</span></div>
+    <div class="click-zone" id="knife-zone">
+        <div class="karambit" id="karambit-knife">
+            <div class="blade"></div>
+            <div class="handle"></div>
+            <div class="ring"></div>
+        </div>
+    </div>
     
-    <button id="target">Target Button</button>
-    <button id="toggle">Start Autoclicker</button>
+    <div class="shop-box">
+        <button class="upgrade-btn" id="buy-auto" disabled>Buy Autoclicker (Cost: 15)</button>
+    </div>
 </div>
 
 <script>
-    let count = 0;
-    let clickInterval = null;
-    let isRunning = false;
+    let score = 0;
+    let autoClickers = 0;
+    let autoClickerCost = 15;
+    let currentRotation = 0;
+    let rotationSpeed = 0;
 
-    const targetButton = document.getElementById('target');
-    const toggleButton = document.getElementById('toggle');
-    const clickCountDisplay = document.getElementById('clickCount');
+    const scoreDisplay = document.getElementById('score');
+    const autoCountDisplay = document.getElementById('auto-count');
+    const cpsRateDisplay = document.getElementById('cps-rate');
+    const knife = document.getElementById('karambit-knife');
+    const knifeZone = document.getElementById('knife-zone');
+    const buyAutoButton = document.getElementById('buy-auto');
 
-    // Increment count when the target is clicked
-    targetButton.addEventListener('click', () => {
-        count++;
-        clickCountDisplay.textContent = count;
+    // Update numbers on the screen and check button states
+    function updateDisplay() {
+        scoreDisplay.textContent = Math.floor(score);
+        autoCountDisplay.textContent = autoClickers;
+        cpsRateDisplay.textContent = autoClickers;
+        buyAutoButton.textContent = `Buy Autoclicker (Cost: ${autoClickerCost})`;
+        buyAutoButton.disabled = score < autoClickerCost;
+    }
+
+    // Manual click action
+    knifeZone.addEventListener('click', () => {
+        score += 1;
+        rotationSpeed += 15; // Spin faster upon manual click
+        updateDisplay();
     });
 
-    // Toggle the autoclicker loop
-    toggleButton.addEventListener('click', () => {
-        if (isRunning) {
-            clearInterval(clickInterval);
-            toggleButton.textContent = "Start Autoclicker";
-            toggleButton.classList.remove('running');
-            isRunning = false;
-        } else {
-            // Trigger a click every 100 milliseconds
-            clickInterval = setInterval(() => {
-                targetButton.click();
-            }, 100);
-            toggleButton.textContent = "Stop Autoclicker";
-            toggleButton.classList.add('running');
-            isRunning = true;
+    // Buy upgrade action
+    buyAutoButton.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevents triggering a manual click
+        if (score >= autoClickerCost) {
+            score -= autoClickerCost;
+            autoClickers += 1;
+            rotationSpeed += 25; // Boost spin speed when buying
+            autoClickerCost = Math.round(autoClickerCost * 1.15); // Increase cost
+            updateDisplay();
         }
     });
+
+    // Game loop running 60 times per second
+    setInterval(() => {
+        // Add autoclicker progress
+        if (autoClickers > 0) {
+            score += autoClickers / 60;
+            rotationSpeed += autoClickers * 0.1; // Passive acceleration from autoclickers
+            updateDisplay();
+        }
+
+        // Apply rotation movement
+        currentRotation += rotationSpeed;
+        knife.style.transform = `rotate(${currentRotation}deg)`;
+
+        // Gradually slow down the spin due to friction
+        rotationSpeed *= 0.95;
+        if (rotationSpeed < 0.1) rotationSpeed = 0;
+    }, 1000 / 60);
 </script>
 
 </body>
