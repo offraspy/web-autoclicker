@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Autoclicker Demonstration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding-top: 50px;
+            background-color: #f4f4f9;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            display: inline-block;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+        }
+        #target { background-color: #3498db; color: white; }
+        #toggle { background-color: #2ecc71; color: white; }
+        #toggle.running { background-color: #e74c3c; }
+        .score { font-size: 24px; font-weight: bold; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Web Autoclicker</h1>
+    <p>This application simulates rapid clicks on the target button.</p>
+    
+    <div class="score">Clicks: <span id="clickCount">0</span></div>
+    
+    <button id="target">Target Button</button>
+    <button id="toggle">Start Autoclicker</button>
+</div>
+
+<script>
+    let count = 0;
+    let clickInterval = null;
+    let isRunning = false;
+
+    const targetButton = document.getElementById('target');
+    const toggleButton = document.getElementById('toggle');
+    const clickCountDisplay = document.getElementById('clickCount');
+
+    // Increment count when the target is clicked
+    targetButton.addEventListener('click', () => {
+        count++;
+        clickCountDisplay.textContent = count;
+    });
+
+    // Toggle the autoclicker loop
+    toggleButton.addEventListener('click', () => {
+        if (isRunning) {
+            clearInterval(clickInterval);
+            toggleButton.textContent = "Start Autoclicker";
+            toggleButton.classList.remove('running');
+            isRunning = false;
+        } else {
+            // Trigger a click every 100 milliseconds
+            clickInterval = setInterval(() => {
+                targetButton.click();
+            }, 100);
+            toggleButton.textContent = "Stop Autoclicker";
+            toggleButton.classList.add('running');
+            isRunning = true;
+        }
+    });
+</script>
+
+</body>
+</html>
