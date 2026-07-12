@@ -114,8 +114,11 @@
         #sidebar {
             display: flex;
             flex-direction: column;
-            gap: 25px;
+            gap: 20px;
             justify-content: center;
+            overflow-y: auto;
+            max-height: 100vh;
+            padding-right: 4px;
         }
 
         .panel {
@@ -215,6 +218,70 @@
             color: var(--accent-cyan);
             text-shadow: 0 0 8px rgba(0,255,255,0.4);
         }
+
+        /* --- SKIN PANEL --- */
+        .skin-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .skin-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 8px 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .skin-item:hover {
+            border-color: var(--accent-cyan);
+        }
+
+        .skin-item.selected {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 255, 255, 0.08);
+            box-shadow: 0 0 10px rgba(0,255,255,0.2);
+        }
+
+        .skin-item.locked {
+            opacity: 0.55;
+        }
+
+        .skin-swatch {
+            width: 34px;
+            height: 34px;
+            border-radius: 6px;
+            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .skin-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            flex: 1;
+        }
+
+        .skin-name {
+            font-size: 0.85rem;
+            color: #fff;
+        }
+
+        .skin-sub {
+            font-size: 0.7rem;
+            color: #8c889e;
+        }
+
+        .skin-sub.owned {
+            color: var(--accent-cyan);
+        }
     </style>
 </head>
 <body>
@@ -235,273 +302,5 @@
 
         <aside id="sidebar">
             <div class="panel">
-                <div class="panel-header">UPGRADES</div>
-                <div id="whetstone" class="upgrade-item">
-                    <div class="upgrade-info">
-                        <span class="upgrade-name">Whetstone</span>
-                        <span class="upgrade-desc">(Increases spins per click)</span>
-                    </div>
-                    <span class="upgrade-cost">Cost: 150</span>
-                </div>
-                <div id="balanced" class="upgrade-item">
-                    <div class="upgrade-info">
-                        <span class="upgrade-name">Balanced Blade</span>
-                        <span class="upgrade-desc">(Automatic base spin rate)</span>
-                    </div>
-                    <span class="upgrade-cost">Cost: 500</span>
-                </div>
-                <div id="autospinner" class="upgrade-item">
-                    <div class="upgrade-info">
-                        <span class="upgrade-name">Autospinner Bot</span>
-                        <span class="upgrade-desc">(Periodically clicks automatically)</span>
-                    </div>
-                    <span class="upgrade-cost">Cost: 2,500</span>
-                </div>
-            </div>
-
-            <div class="panel">
-                <div class="panel-header">STATS</div>
-                <div class="stat-row">Current RPM: <span id="stat-rpm" class="stat-value">0</span></div>
-                <div class="stat-row">Click Power: <span id="stat-click" class="stat-value">1</span></div>
-                <div class="stat-row">Auto-Spins: <span id="stat-auto" class="stat-value">0</span></div>
-                
-                <div id="autoclick-btn">
-                    <span>[x] Autoclick</span>
-                    <span id="status-toggle">OFF</span>
-                </div>
-            </div>
-        </aside>
-    </div>
-
-    <script>
-        // --- GAME ENGINE SETUP ---
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const wrapper = document.getElementById('canvas-wrapper');
-
-        let game = {
-            spins: 0,
-            rpm: 0,
-            clickPower: 1,
-            passiveSps: 0,
-            autoclickerPurchased: false,
-            autoclickActive: false,
-            
-            // Physics / Animation
-            angle: 0,
-            velocity: 0,
-            friction: 0.985,
-            
-            // Upgrade Costs tracking
-            costs: { whetstone: 150, balanced: 500, autospinner: 2500 }
-        };
-
-        const ui = {
-            spins: document.getElementById('total-spins'),
-            rpm: document.getElementById('stat-rpm'),
-            click: document.getElementById('stat-click'),
-            auto: document.getElementById('stat-auto'),
-            toggle: document.getElementById('status-toggle'),
-            whetstone: document.getElementById('whetstone'),
-            balanced: document.getElementById('balanced'),
-            autospinner: document.getElementById('autospinner')
-        };
-
-        function commas(x) { return Math.floor(x).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
-
-        // --- ARTISTIC GRAPHICS ENGINE (CANVAS VECTOR DRAWING) ---
-        function drawScene() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const cx = canvas.width / 2;
-            const cy = canvas.height / 2;
-
-            // 1. Draw Target Ring Backdrop
-            ctx.beginPath();
-            ctx.arc(cx, cy, 170, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(cx, cy, 170, 0, Math.PI * 2);
-            ctx.setLineDash([8, 15]);
-            ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
-            ctx.stroke();
-            ctx.setLineDash([]); // Reset line dashes
-
-            // 2. Save matrix and isolate transformations directly around the finger ring center point
-            ctx.save();
-            ctx.translate(cx, cy);
-            ctx.rotate(game.angle);
-
-            // Shift coordinate anchor down right so the blade swings perfectly out around the ring center
-            ctx.translate(-35, -15);
-
-            // DRAW THE FINGER LOOP RING
-            ctx.shadowColor = '#0ff';
-            ctx.shadowBlur = 10;
-            ctx.beginPath();
-            ctx.arc(35, 15, 28, 0, Math.PI * 2);
-            ctx.strokeStyle = '#00e5ff';
-            ctx.lineWidth = 7;
-            ctx.stroke();
-            ctx.shadowBlur = 0; // Turn off glow for handle body details
-
-            // DRAW METALLIC ERGONOMIC HANDLE HOUSING
-            ctx.beginPath();
-            ctx.moveTo(35, -13);
-            ctx.bezierCurveTo(-10, -5, -45, 20, -75, 55); 
-            ctx.bezierCurveTo(-65, 75, -45, 80, -35, 60); 
-            ctx.bezierCurveTo(-20, 45, 5, 45, 20, 40); 
-            ctx.closePath();
-            ctx.fillStyle = '#1b1b22';
-            ctx.fill();
-            ctx.strokeStyle = '#383845';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-
-            // Handle Grip Indentations 
-            ctx.fillStyle = '#0d0d12';
-            for (let i = 0; i < 3; i++) {
-                ctx.beginPath();
-                ctx.arc(-20 - (i * 18), 46 + (i * 3), 7, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            // DRAW SAPPHIRE CURVED TIGER CLAW BLADE
-            ctx.shadowColor = 'rgba(0, 150, 255, 0.8)';
-            ctx.shadowBlur = 15;
-            ctx.beginPath();
-            ctx.moveTo(-75, 55);
-            ctx.bezierCurveTo(-110, 95, -120, 150, -90, 200); // Inner sharp curve edge
-            ctx.bezierCurveTo(-135, 140, -125, 85, -60, 40);  // Spine edge out to point
-            ctx.closePath();
-            
-            // Create rich dark sapphire gradient overlay skin
-            let bladeGrad = ctx.createRadialGradient(-90, 110, 10, -90, 110, 90);
-            bladeGrad.addColorStop(0, '#0055ff');
-            bladeGrad.addColorStop(0.5, '#00bcff');
-            bladeGrad.addColorStop(1, '#001144');
-            ctx.fillStyle = bladeGrad;
-            ctx.fill();
-            
-            // Brilliant bright cyan edge lining
-            ctx.strokeStyle = '#66e5ff';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.restore(); // Revert back to safe screen coordinates
-        }
-
-        // --- CORE PROCESS LOGIC ENGINE ---
-        function updateStorePanels() {
-            ui.spins.textContent = commas(game.spins);
-            ui.rpm.textContent = commas(game.rpm);
-            ui.click.textContent = commas(game.clickPower);
-            ui.auto.textContent = commas(game.passiveSps * 60); // Display as passive RPM potential
-
-            // Manage purchase status indicator changes dynamically
-            [['whetstone', ui.whetstone], ['balanced', ui.balanced], ['autospinner', ui.autospinner]].forEach(([key, element]) => {
-                element.querySelector('.upgrade-cost').textContent = `Cost: ${commas(game.costs[key])}`;
-                if (game.spins >= game.costs[key]) {
-                    element.classList.remove('disabled');
-                } else {
-                    element.classList.add('disabled');
-                }
-            });
-
-            if (game.autoclickerPurchased) {
-                ui.toggle.textContent = game.autoclickActive ? "ON" : "OFF";
-                ui.toggle.className = game.autoclickActive ? "active" : "";
-            } else {
-                ui.toggle.textContent = "LOCKED";
-            }
-        }
-
-        function clickEventTrigger(e) {
-            // Cancel operations if clicking inside panels directly
-            if (e.target.closest('.panel')) return;
-
-            game.spins += game.clickPower;
-            game.velocity += (game.clickPower * 0.12) + 2; // Inject raw kinetic torque energy to calculation
-            
-            // Create Floating Click Text Effects
-            if (e.clientX && e.clientY) {
-                const popup = document.createElement('div');
-                popup.className = 'click-popup';
-                popup.textContent = `+${commas(game.clickPower)}`;
-                popup.style.left = `${e.clientX - 25}px`;
-                popup.style.top = `${e.clientY - 20}px`;
-                document.body.appendChild(popup);
-                setTimeout(() => popup.remove(), 800);
-            }
-            updateStorePanels();
-        }
-
-        function buyUpgrade(type) {
-            if (game.spins < game.costs[type]) return;
-
-            game.spins -= game.costs[type];
-            
-            if (type === 'whetstone') {
-                game.clickPower += 1;
-            } else if (type === 'balanced') {
-                game.passiveSps += 0.5; // Inject automated base spin additions per update tick
-            } else if (type === 'autospinner') {
-                game.autoclickerPurchased = true;
-                game.autoclickActive = true;
-            }
-
-            game.costs[type] = Math.round(game.costs[type] * 1.28);
-            updateStorePanels();
-        }
-
-        // --- TICK TIME EVENT FRAME ENGINE ---
-        let lastAutoClickTime = 0;
-        
-        function mainLoop(timestamp) {
-            // 1. Calculate Automated Processing Elements
-            if (game.passiveSps > 0) {
-                game.spins += (game.passiveSps / 60);
-                game.velocity += (game.passiveSps * 0.05);
-            }
-
-            // Simulating Periodic Bot Clicks
-            if (game.autoclickerPurchased && game.autoclickActive && timestamp - lastAutoClickTime > 400) {
-                game.spins += game.clickPower;
-                game.velocity += (game.clickPower * 0.08);
-                lastAutoClickTime = timestamp;
-            }
-
-            // 2. Compute Rotational Friction Physics Formulas
-            game.angle += (game.velocity * Math.PI) / 180;
-            game.velocity *= game.friction;
-            if (game.velocity < 0.01) game.velocity = 0;
-
-            // Compute exact real-time engine RPM output readout tracking
-            game.rpm = Math.round(game.velocity * 10);
-
-            // 3. Render Canvas Vector Changes
-            drawScene();
-            updateStorePanels();
-
-            requestAnimationFrame(mainLoop);
-        }
-
-        // --- INTERACTIVE SYSTEM EVENT LISTENERS ---
-        wrapper.addEventListener('mousedown', clickEventTrigger);
-        ui.whetstone.addEventListener('click', () => buyUpgrade('whetstone'));
-        ui.balanced.addEventListener('click', () => buyUpgrade('balanced'));
-        ui.autospinner.addEventListener('click', () => buyUpgrade('autospinner'));
-        
-        document.getElementById('autoclick-btn').addEventListener('click', () => {
-            if (!game.autoclickerPurchased) return;
-            game.autoclickActive = !game.autoclickActive;
-            updateStorePanels();
-        });
-
-        // Initialize Engine
-        requestAnimationFrame(mainLoop);
-    </script>
-</body>
-</html>
+                <div class="panel-header">SKINS</div>
+                <div id="skin-grid
