@@ -1,57 +1,602 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Perfect Karambit Spin</title>
-<style>
-  body {
-    background-color: #0f0f12;
-    color: #ffffff;
-    font-family: sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    margin: 0;
-    overflow: hidden;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karambit Spin Clicker</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Audiowide&display=swap');
 
-  .wrapper {
-    text-align: center;
-  }
+        :root {
+            --bg-color: #05010d;
+            --main-font: 'Audiowide', cursive;
+            --ui-purple: rgba(20, 7, 43, 0.75);
+            --ui-purple-border: #4d0b8c;
+            --accent-cyan: #0ff;
+            --accent-pink: #d011f0;
+        }
 
-  /* The SVG spins flawlessly around the specified pixel center */
-  #karambit-svg {
-    width: 500px;
-    height: 500px;
-    cursor: pointer;
-    transform-origin: 150px 350px;
-    transition: transform 0.4s cubic-bezier(0.15, 0.85, 0.35, 1);
-  }
-</style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(white, rgba(255,255,255,.2) 1px, transparent 4px),
+                radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 3px);
+            background-size: 400px 400px, 250px 250px;
+            background-position: 0 0, 100px 150px;
+            color: #fff;
+            font-family: var(--main-font);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #game-container {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            width: 100vw;
+            height: 100vh;
+            max-width: 1400px;
+            padding: 40px;
+            box-sizing: border-box;
+            gap: 40px;
+        }
+
+        #play-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        #game-title {
+            font-size: 2.8rem;
+            color: var(--accent-cyan);
+            letter-spacing: 2px;
+            margin: 0;
+            text-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+        }
+
+        #canvas-wrapper {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            cursor: pointer;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #score-display-wrapper {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #total-spins {
+            font-size: 4.5rem;
+            margin: 0;
+            color: #ffffff;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.5), 0 0 40px rgba(208, 17, 240, 0.3);
+        }
+
+        #spins-label {
+            font-size: 1.2rem;
+            color: #a09cb0;
+            letter-spacing: 1px;
+            margin-top: 5px;
+        }
+
+        .click-popup {
+            position: absolute;
+            font-size: 1.4rem;
+            color: var(--accent-cyan);
+            pointer-events: none;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(0,255,255,0.8);
+            animation: floatAway 0.8s ease-out forwards;
+        }
+
+        @keyframes floatAway {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-60px) scale(0.8); opacity: 0; }
+        }
+
+        #sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            justify-content: center;
+            overflow-y: auto;
+            max-height: 100vh;
+            padding-right: 4px;
+        }
+
+        .panel {
+            background: var(--ui-purple);
+            border: 2px solid var(--ui-purple-border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(77, 11, 140, 0.2);
+        }
+
+        .panel-header {
+            font-size: 1.1rem;
+            color: var(--accent-cyan);
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+            padding-bottom: 5px;
+        }
+
+        .upgrade-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .upgrade-item:hover {
+            background: rgba(0, 255, 255, 0.05);
+            border-color: var(--accent-cyan);
+        }
+
+        .upgrade-item.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            border-color: rgba(255, 255, 255, 0.08);
+            background: rgba(0,0,0,0.2);
+        }
+
+        .upgrade-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .upgrade-name {
+            font-size: 0.95rem;
+            color: #ffffff;
+        }
+
+        .upgrade-desc {
+            font-size: 0.75rem;
+            color: #8c889e;
+        }
+
+        .upgrade-cost {
+            font-size: 0.9rem;
+            color: var(--accent-pink);
+            font-weight: bold;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            color: #c5c1d4;
+        }
+
+        .stat-value {
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        #autoclick-btn {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding: 8px 0;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        #status-toggle {
+            color: var(--accent-pink);
+            font-weight: bold;
+        }
+
+        #status-toggle.active {
+            color: var(--accent-cyan);
+            text-shadow: 0 0 8px rgba(0,255,255,0.4);
+        }
+
+        .skin-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .skin-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 8px 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .skin-item:hover {
+            border-color: var(--accent-cyan);
+        }
+
+        .skin-item.selected {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 255, 255, 0.08);
+            box-shadow: 0 0 10px rgba(0,255,255,0.2);
+        }
+
+        .skin-item.locked {
+            opacity: 0.55;
+        }
+
+        .skin-swatch {
+            width: 34px;
+            height: 34px;
+            border-radius: 6px;
+            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .skin-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            flex: 1;
+        }
+
+        .skin-name {
+            font-size: 0.85rem;
+            color: #fff;
+        }
+
+        .skin-sub {
+            font-size: 0.7rem;
+            color: #8c889e;
+        }
+
+        .skin-sub.owned {
+            color: var(--accent-cyan);
+        }
+    </style>
 </head>
 <body>
 
-<div class="wrapper">
-  <h1>Karambit Showcase</h1>
-  <p>Click the knife to spin</p>
-  
-  <svg id="karambit-svg" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="caseHardened" x1="0%" y1="100%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="#1a365d" />
-        <stop offset="25%" stop-color="#2b4c7e" />
-        <stop offset="50%" stop-color="#6b21a8" />
-        <stop offset="70%" stop-color="#b45309" />
-        <stop offset="100%" stop-color="#f59e0b" />
-      </linearGradient>
-      
-      <linearGradient id="metalDark" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#2d3748" />
-        <stop offset="50%" stop-color="#1a202c" />
-        <stop offset="100%" stop-color="#0d1117" />
-      </linearGradient>
-    </defs>
+    <div id="game-container">
+        <main id="play-area">
+            <h1 id="game-title">KARAMBIT SPIN CLICKER</h1>
+            
+            <div id="canvas-wrapper">
+                <canvas id="gameCanvas" width="500" height="500"></canvas>
+            </div>
 
-    <path d="M 310 260 C 370 250, 440 280, 460 340 C 475
+            <div id="score-display-wrapper">
+                <h2 id="total-spins">0</h2>
+                <div id="spins-label">SPINS</div>
+            </div>
+        </main>
+
+        <aside id="sidebar">
+            <div class="panel">
+                <div class="panel-header">SKINS</div>
+                <div id="skin-grid" class="skin-grid"></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">UPGRADES</div>
+                <div id="whetstone" class="upgrade-item">
+                    <div class="upgrade-info">
+                        <span class="upgrade-name">Whetstone</span>
+                        <span class="upgrade-desc">(Increases spins per click)</span>
+                    </div>
+                    <span class="upgrade-cost">Cost: 150</span>
+                </div>
+                <div id="balanced" class="upgrade-item">
+                    <div class="upgrade-info">
+                        <span class="upgrade-name">Balanced Blade</span>
+                        <span class="upgrade-desc">(Automatic base spin rate)</span>
+                    </div>
+                    <span class="upgrade-cost">Cost: 500</span>
+                </div>
+                <div id="autospinner" class="upgrade-item">
+                    <div class="upgrade-info">
+                        <span class="upgrade-name">Autospinner Bot</span>
+                        <span class="upgrade-desc">(Periodically clicks automatically)</span>
+                    </div>
+                    <span class="upgrade-cost">Cost: 2,500</span>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">STATS</div>
+                <div class="stat-row">Current RPM: <span id="stat-rpm" class="stat-value">0</span></div>
+                <div class="stat-row">Click Power: <span id="stat-click" class="stat-value">1</span></div>
+                <div class="stat-row">Auto-Spins: <span id="stat-auto" class="stat-value">0</span></div>
+                
+                <div id="autoclick-btn">
+                    <span>[x] Autoclick</span>
+                    <span id="status-toggle">OFF</span>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const wrapper = document.getElementById('canvas-wrapper');
+
+        // Combined Embedded Vector Graphics Data
+        const handleImage = new Image();
+        handleImage.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%232e2e36"/><stop offset="100%" stop-color="%23111114"/></linearGradient></defs><circle cx="90" cy="180" r="22" fill="none" stroke="%23222" stroke-width="12"/><circle cx="90" cy="180" r="22" fill="none" stroke="%23444" stroke-width="4"/><path d="M 95,160 C 120,150 150,110 140,80 C 135,70 115,85 105,75 C 95,65 100,50 85,55 C 75,60 75,80 65,90 C 55,100 45,120 55,140 Z" fill="url(%23g)" stroke="%23000" stroke-width="3"/><circle cx="120" cy="115" r="7" fill="%231a1a1f"/><circle cx="100" cy="95" r="7" fill="%231a1a1f"/></svg>';
+
+        const SKINS = [
+            { 
+                id: 'doppler', 
+                name: 'Doppler Blue', 
+                cost: 0, 
+                color: '#1a237e',
+                image: new Image()
+            },
+            { 
+                id: 'emerald', 
+                name: 'Emerald', 
+                cost: 1000, 
+                color: '#00e676',
+                image: new Image()
+            },
+            { 
+                id: 'crimson', 
+                name: 'Crimson Web', 
+                cost: 2500, 
+                color: '#d50000',
+                image: new Image()
+            },
+            { 
+                id: 'marble', 
+                name: 'Marble Fade', 
+                cost: 4000, 
+                color: '#ff007f',
+                image: new Image()
+            },
+            { 
+                id: 'lore', 
+                name: 'Lore', 
+                cost: 6000, 
+                color: '#ffab00',
+                image: new Image()
+            }
+        ];
+
+        // Embedded customized blade graphics per skin
+        SKINS[0].image.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><defs><radialGradient id="d" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="%230d47a1"/><stop offset="70%" stop-color="%234a148c"/><stop offset="100%" stop-color="%23000000"/></radialGradient></defs><path d="M 135,82 C 170,70 230,110 250,160 C 210,120 160,110 115,112 Z" fill="url(%23d)" stroke="%233f51b5" stroke-width="2"/></svg>';
+        SKINS[1].image.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><defs><linearGradient id="e" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%2300c853"/><stop offset="50%" stop-color="%2300b0ff"/><stop offset="100%" stop-color="%23004d40"/></linearGradient></defs><path d="M 135,82 C 170,70 230,110 250,160 C 210,120 160,110 115,112 Z" fill="url(%23e)" stroke="%23b9f6ca" stroke-width="2"/></svg>';
+        SKINS[2].image.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><path d="M 135,82 C 170,70 230,110 250,160 C 210,120 160,110 115,112 Z" fill="%23b71c1c" stroke="%23ff8a80" stroke-width="2"/><path d="M 140,85 Q 180,100 240,150 M 160,80 Q 190,110 210,140 M 180,75 Q 220,95 235,120" stroke="%23111" stroke-width="1" fill="none" opacity="0.6"/></svg>';
+        SKINS[3].image.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><defs><linearGradient id="m" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23d500f9"/><stop offset="40%" stop-color="%232979ff"/><stop offset="70%" stop-color="%23ffd600"/><stop offset="100%" stop-color="%23ff1744"/></linearGradient></defs><path d="M 135,82 C 170,70 230,110 250,160 C 210,120 160,110 115,112 Z" fill="url(%23m)" stroke="%23fff" stroke-width="1.5"/></svg>';
+        SKINS[4].image.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><defs><linearGradient id="l" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23ffd54f"/><stop offset="70%" stop-color="%23ffb300"/><stop offset="100%" stop-color="%23ff6f00"/></linearGradient></defs><path d="M 135,82 C 170,70 230,110 250,160 C 210,120 160,110 115,112 Z" fill="url(%23l)" stroke="%23ffea00" stroke-width="2"/><path d="M 145,95 C 165,90 185,100 195,115" stroke="%233e2723" stroke-width="2" stroke-dasharray="3,3" fill="none"/></svg>';
+
+        let game = {
+            spins: 0,
+            rpm: 0,
+            clickPower: 1,
+            passiveSps: 0,
+            autoclickerPurchased: false,
+            autoclickActive: false,
+            angle: 0,
+            velocity: 0,
+            friction: 0.985,
+            costs: { whetstone: 150, balanced: 500, autospinner: 2500 },
+            ownedSkins: ['doppler'],
+            currentSkin: 'doppler'
+        };
+
+        const ui = {
+            spins: document.getElementById('total-spins'),
+            rpm: document.getElementById('stat-rpm'),
+            click: document.getElementById('stat-click'),
+            auto: document.getElementById('stat-auto'),
+            toggle: document.getElementById('status-toggle'),
+            whetstone: document.getElementById('whetstone'),
+            balanced: document.getElementById('balanced'),
+            autospinner: document.getElementById('autospinner'),
+            skinGrid: document.getElementById('skin-grid')
+        };
+
+        function commas(x) { return Math.floor(x).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+
+        function renderSkinGrid() {
+            ui.skinGrid.innerHTML = '';
+            SKINS.forEach(skin => {
+                const owned = game.ownedSkins.includes(skin.id);
+                const selected = game.currentSkin === skin.id;
+
+                const item = document.createElement('div');
+                item.className = 'skin-item' + (selected ? ' selected' : '') + (!owned ? ' locked' : '');
+
+                const swatch = document.createElement('div');
+                swatch.className = 'skin-swatch';
+                swatch.style.backgroundColor = skin.color;
+                item.appendChild(swatch);
+
+                const info = document.createElement('div');
+                info.className = 'skin-info';
+                const nameEl = document.createElement('div');
+                nameEl.className = 'skin-name';
+                nameEl.textContent = skin.name;
+                const subEl = document.createElement('div');
+                subEl.className = 'skin-sub' + (owned ? ' owned' : '');
+                subEl.textContent = owned ? (selected ? 'Equipped' : 'Owned - tap to equip') : `Unlock: ${commas(skin.cost)} spins`;
+                info.appendChild(nameEl);
+                info.appendChild(subEl);
+                item.appendChild(info);
+
+                item.addEventListener('click', () => {
+                    if (owned) {
+                        game.currentSkin = skin.id;
+                        renderSkinGrid();
+                    } else if (game.spins >= skin.cost) {
+                        game.spins -= skin.cost;
+                        game.ownedSkins.push(skin.id);
+                        game.currentSkin = skin.id;
+                        renderSkinGrid();
+                        updateStorePanels();
+                    }
+                });
+
+                ui.skinGrid.appendChild(item);
+            });
+        }
+
+        function drawScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            
+            ctx.beginPath();
+            ctx.arc(cx, cy, 140, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.12)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(game.angle);
+
+            // Shifting pivot directly onto center tracking ring location
+            ctx.translate(-90, -180);
+
+            const activeSkin = SKINS.find(s => s.id === game.currentSkin) || SKINS[0];
+
+            if (activeSkin.image.complete) {
+                ctx.drawImage(activeSkin.image, 0, 0, 300, 300);
+            }
+
+            if (handleImage.complete) {
+                ctx.drawImage(handleImage, 0, 0, 300, 300);
+            }
+
+            ctx.restore(); 
+        }
+
+        function updateStorePanels() {
+            ui.spins.textContent = commas(game.spins);
+            ui.rpm.textContent = commas(game.rpm);
+            ui.click.textContent = commas(game.clickPower);
+            ui.auto.textContent = commas(game.passiveSps * 60);
+
+            [['whetstone', ui.whetstone], ['balanced', ui.balanced], ['autospinner', ui.autospinner]].forEach(([key, element]) => {
+                element.querySelector('.upgrade-cost').textContent = `Cost: ${commas(game.costs[key])}`;
+                if (game.spins >= game.costs[key]) {
+                    element.classList.remove('disabled');
+                } else {
+                    element.classList.add('disabled');
+                }
+            });
+
+            if (game.autoclickerPurchased) {
+                ui.toggle.textContent = game.autoclickActive ? "ON" : "OFF";
+                ui.toggle.className = game.autoclickActive ? "active" : "";
+            } else {
+                ui.toggle.textContent = "LOCKED";
+            }
+        }
+
+        function clickEventTrigger(e) {
+            if (e.target.closest('.panel')) return;
+
+            game.spins += game.clickPower;
+            game.velocity += (game.clickPower * 0.15) + 3.2; 
+            
+            if (e.clientX && e.clientY) {
+                const popup = document.createElement('div');
+                popup.className = 'click-popup';
+                popup.textContent = `+${commas(game.clickPower)}`;
+                popup.style.left = `${e.clientX - 25}px`;
+                popup.style.top = `${e.clientY - 20}px`;
+                document.body.appendChild(popup);
+                setTimeout(() => popup.remove(), 800);
+            }
+            updateStorePanels();
+        }
+
+        function buyUpgrade(type) {
+            if (game.spins < game.costs[type]) return;
+
+            game.spins -= game.costs[type];
+            
+            if (type === 'whetstone') {
+                game.clickPower += 1;
+            } else if (type === 'balanced') {
+                game.passiveSps += 0.5; 
+            } else if (type === 'autospinner') {
+                game.autoclickerPurchased = true;
+                game.autoclickActive = true;
+            }
+
+            game.costs[type] = Math.round(game.costs[type] * 1.28);
+            updateStorePanels();
+        }
+
+        let lastAutoClickTime = 0;
+        
+        function mainLoop(timestamp) {
+            if (game.passiveSps > 0) {
+                game.spins += (game.passiveSps / 60);
+                game.velocity += (game.passiveSps * 0.06);
+            }
+
+            if (game.autoclickerPurchased && game.autoclickActive && timestamp - lastAutoClickTime > 400) {
+                game.spins += game.clickPower;
+                game.velocity += (game.clickPower * 0.09);
+                lastAutoClickTime = timestamp;
+            }
+
+            game.angle += (game.velocity * Math.PI) / 180;
+            game.velocity *= game.friction;
+            if (game.velocity < 0.01) game.velocity = 0;
+
+            game.rpm = Math.round(game.velocity * 10);
+
+            drawScene();
+            updateStorePanels();
+
+            requestAnimationFrame(mainLoop);
+        }
+
+        wrapper.addEventListener('mousedown', clickEventTrigger);
+        ui.whetstone.addEventListener('click', () => buyUpgrade('whetstone'));
+        ui.balanced.addEventListener('click', () => buyUpgrade('balanced'));
+        ui.autospinner.addEventListener('click', () => buyUpgrade('autospinner'));
+        
+        document.getElementById('autoclick-btn').addEventListener('click', () => {
+            if (!game.autoclickerPurchased) return;
+            game.autoclickActive = !game.autoclickActive;
+            updateStorePanels();
+        });
+
+        renderSkinGrid();
+        requestAnimationFrame(mainLoop);
+    </script>
+</body>
+</html>
